@@ -19,8 +19,8 @@ def train(df,model,loss_fn,optimizer,device,tokenizer,args):
     df = df.sample(frac=1)
     for i in trange(0,df.shape[0],args.batch_size,desc="Iteration"):
         batch_df = df.iloc[i:i+args.batch_size]
-        title = list(batch_df["best_title"])
-        reply = list(batch_df["reply"])
+        title = list(batch_df["best_title"].astype("str"))
+        reply = list(batch_df["reply"].astype("str"))
         target = torch.from_numpy(batch_df["is_best"].to_numpy()).float().view(-1,1)
         # CosineEmbeddingLoss的话标签分为1，-1
         if args.loss_function == "cosine":
@@ -29,6 +29,7 @@ def train(df,model,loss_fn,optimizer,device,tokenizer,args):
         y,y_mask = list2tensor(reply,tokenizer)
 
         x,x_mask,y,y_mask = x.to(device),x_mask.to(device),y.to(device),y_mask.to(device)
+        target = target.to(device)
 
         x_rep,y_rep = model(x,x_mask,y,y_mask)
         if args.loss_function == "cosine":
@@ -123,8 +124,9 @@ def main():
 
     #load dataset
     train_df = pd.read_csv(args.train_file)[["best_title","reply","is_best"]]
-    dev_df = pd.read_csv(args.dev_file)[["best_title","relpy","is_best"]]
-    texts = list(train_df["best_title"]) + list(train_df["reply"])
+    print("the length of train:{}".format(len(train_df)))
+    dev_df = pd.read_csv(args.dev_file)[["best_title","reply","is_best"]]
+    texts = list(train_df["best_title"].astype("str")) + list(train_df["reply"].astype("str"))
     tokenizer = create_tokenizer(texts,args.vocab_size)
 
     # TODO 使用简单的GRU结构

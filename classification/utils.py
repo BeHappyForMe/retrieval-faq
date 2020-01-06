@@ -67,8 +67,8 @@ def list2tensor(sents,tokenizer):
 
     max_len = max([len(sen) for sen in res])
     for i in range(len(res)):
-        _mask = np.zeros((len(res),max_len))
-        _mask[:,len(res[i])] = 1
+        _mask = np.zeros((1,max_len))
+        _mask[:,:len(res[i])] = 1
         #这里先构建mask，不然res[i]改变后原长度找不到了
         res[i] = np.expand_dims(np.array(res[i] + [0]*(max_len-len(res[i]))),0)
         mask.append(_mask)

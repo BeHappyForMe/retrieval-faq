@@ -59,7 +59,7 @@ class GRUEncoder(nn.Module):
             enforce_sorted=False
         )
         #output:[batch,seq,hidden*bidirectional]
-        #hidden:[batch,num_layers*bidirectional,hidden]
+        #hidden:[num_layers*bidirectional,batch,hidden]
         output,hidden = self.rnn(x_embed)
         output,seq_len = nn.utils.rnn.pad_packed_sequence(
             sequence=output,
@@ -82,13 +82,13 @@ class GRUEncoder(nn.Module):
 
         #是否取各层输出或直接取hidden，最后取seq维度上的平均
         if self.avg_hidden:
-            torch.sum(output*mask.unsqueeze(2),1)/torch.sum(mask,1,keepdim=True)
+            hidden = torch.sum(output*mask.unsqueeze(2),1)/torch.sum(mask,1,keepdim=True)
         else:
             #取h_t
             if self.bidirectional:
-                hidden = torch.cat((hidden[:,-2,:],hidden[:,-1,:]),dim=1)
+                hidden = torch.cat((hidden[-2,:,:],hidden[-1,:,:]),dim=1)
             else:
-                hidden = hidden[:,-1,:]
+                hidden = hidden[-1,:,:]
         hidden = self.dropout(hidden)
 
         #[batch,hidden_size]
