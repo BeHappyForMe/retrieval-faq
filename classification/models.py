@@ -94,6 +94,6 @@ class GRUEncoder(nn.Module):
         #[batch,hidden_size]
         return hidden
 
-    class TransformerEncoder(nn.Module):
-        #TODO
-        pass
+class TransformerEncoder(nn.Module):
+    #TODO
+    pass
