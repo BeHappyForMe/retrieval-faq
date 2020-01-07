@@ -14,7 +14,7 @@ class DualEncoder(nn.Module):
         self.encoder2 = encoder2
         if type == "CrossEntropy":
             #交叉熵损失的话增加两层线性神经网络输出，采用二分类交叉熵
-            self.Linear = nn.Sequential(
+            self.linear = nn.Sequential(
                 nn.Linear(self.encoder1.hidden_size + self.encoder2.hidden_size,100),
                 nn.ReLU(),
                 nn.Linear(100,1)
