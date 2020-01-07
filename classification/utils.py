@@ -6,6 +6,7 @@ from collections import Counter
 
 def split():
     """
+        数据预处理
         分割训练、测试集
     :return:
     """

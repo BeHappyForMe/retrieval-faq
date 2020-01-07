@@ -11,8 +11,10 @@ from torch.utils.data import DataLoader
 
 import numpy as np
 import pandas as pd
-from .models import GRUEncoder,DualEncoder
-from .utils import Tokenizer,create_tokenizer,list2tensor
+import sys
+sys.path.append("/Users/zhoup/develop/NLPFaq/retrieval-faq/classification")
+from models import GRUEncoder,DualEncoder
+from utils import Tokenizer,create_tokenizer,list2tensor
 
 def train(df,model,loss_fn,optimizer,device,tokenizer,args):
     model.train()
