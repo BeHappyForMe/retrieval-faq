@@ -64,7 +64,7 @@ class GRUEncoder(nn.Module):
         output,seq_len = nn.utils.rnn.pad_packed_sequence(
             sequence=output,
             batch_first=True,
-            padding_value=0.0,
+            padding_value=0,
             total_length=mask.shape[1]
         )
 

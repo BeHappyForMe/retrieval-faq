@@ -76,5 +76,5 @@ def list2tensor(sents,tokenizer):
     res = np.concatenate(res,axis=0)
     mask = np.concatenate(mask,axis=0)
     res = torch.from_numpy(res).long()
-    mask = torch.from_numpy(mask).long()
+    mask = torch.from_numpy(mask).float()
     return res,mask

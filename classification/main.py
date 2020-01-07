@@ -74,6 +74,7 @@ def evaluate(df,model,loss_fn,device,tokenizer,args):
         y, y_mask = list2tensor(reply, tokenizer)
 
         x, x_mask, y, y_mask = x.to(device), x_mask.to(device), y.to(device), y_mask.to(device)
+        target = target.to(device)
 
         with torch.no_grad():
             x_rep, y_rep = model(x, x_mask, y, y_mask)

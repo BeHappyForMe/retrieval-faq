@@ -7,4 +7,4 @@ python ./main.py  \
     --hidden_size  300  \
     --embed_size  300  \
     --batch_size  16   \
-    --loss_function  CrossEntropy
+    --loss_function  cosine
