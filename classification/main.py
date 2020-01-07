@@ -11,8 +11,6 @@ from torch.utils.data import DataLoader
 
 import numpy as np
 import pandas as pd
-import sys
-sys.path.append("/Users/zhoup/develop/NLPFaq/retrieval-faq/classification")
 from models import GRUEncoder,DualEncoder
 from utils import Tokenizer,create_tokenizer,list2tensor
 
@@ -128,13 +126,24 @@ def main():
     train_df = pd.read_csv(args.train_file)[["best_title","reply","is_best"]]
     print("the length of train:{}".format(len(train_df)))
     dev_df = pd.read_csv(args.dev_file)[["best_title","reply","is_best"]]
-    texts = list(train_df["best_title"].astype("str")) + list(train_df["reply"].astype("str"))
-    tokenizer = create_tokenizer(texts,args.vocab_size)
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    if os.path.exists(os.path.join(args.output_dir,"tokenizer.pickle")):
+        print("load tokenizer from file:{}".format(os.path.join(args.output_dir,"tokenizer.pickle")))
+        with open(os.path.join(args.output_dir,"tokenizer.pickle"),"rb") as fint:
+            tokenizer = pickle.load(fint)
+    else:
+        texts = list(train_df["best_title"].astype("str")) + list(train_df["reply"].astype("str"))
+        tokenizer = create_tokenizer(texts, args.vocab_size)
+        with open(os.path.join(args.output_dir, "tokenizer.pickle"), "wb") as fout:
+            pickle.dump(tokenizer, fout)
 
     # TODO 使用简单的GRU结构
     title_encoder = GRUEncoder(tokenizer.vocab_size, args.embed_size, args.hidden_size)
     reply_encoder = GRUEncoder(tokenizer.vocab_size, args.embed_size, args.hidden_size)
     model = DualEncoder(title_encoder,reply_encoder,type=args.loss_function)
+    print("the structure of model:{}".format(model))
     if args.loss_function == "CrossEntropy":
         loss_fn = nn.BCEWithLogitsLoss()
     elif args.loss_function == "cosine":
@@ -142,11 +151,6 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(),lr=1e-4)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-    with open(os.path.join(args.output_dir,"tokenizer.pickle"),"wb") as fout:
-        pickle.dump(tokenizer,fout)
 
     best_acc =0.
     for epoch in trange(args.num_epochs,desc="Epoch"):
