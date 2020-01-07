@@ -114,12 +114,13 @@ class FAQProcessor(DataProcessor):
     def _create_examples(self,path,set_type):
         df = pd.read_csv(path)
         examples = []
-        titles = df["best_title"].tolist()
-        reply = df["reply"].tolist()
+        titles = df["best_title"].astype("str").tolist()
+        reply = df["reply"].astype("str").tolist()
         labels = df["is_best"].astype("int").tolist()
         for i in range(len(labels)):
             guid = "%s-%s" % (set_type,i)
             examples.append(InputExample(guid=guid,text_a=titles[i],text_b=reply[i],label=labels[i]))
+        return examples
 
 processors["faq_bot_bert"] = FAQProcessor
 output_modes["faq_bot_bert"] = "classification"
@@ -197,16 +198,16 @@ def train(args, train_dataset, model, tokenizer):
     epochs_trained = 0
     steps_trained_in_current_epoch = 0
     # Check if continuing training from a checkpoint
-    if os.path.exists(args.model_name_or_path):
+    # if os.path.exists(args.model_name_or_path):
         # set global_step to gobal_step of last saved checkpoint from model path
-        global_step = int(args.model_name_or_path.split("-")[-1].split("/")[0])
-        epochs_trained = global_step // (len(train_dataloader) // args.gradient_accumulation_steps)
-        steps_trained_in_current_epoch = global_step % (len(train_dataloader) // args.gradient_accumulation_steps)
+        # global_step = int(args.model_name_or_path.split("-")[-1].split("/")[0])
+        # epochs_trained = global_step // (len(train_dataloader) // args.gradient_accumulation_steps)
+        # steps_trained_in_current_epoch = global_step % (len(train_dataloader) // args.gradient_accumulation_steps)
 
-        logger.info("  Continuing training from checkpoint, will skip to saved global_step")
-        logger.info("  Continuing training from epoch %d", epochs_trained)
-        logger.info("  Continuing training from global step %d", global_step)
-        logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
+        # logger.info("  Continuing training from checkpoint, will skip to saved global_step")
+        # logger.info("  Continuing training from epoch %d", epochs_trained)
+        # logger.info("  Continuing training from global step %d", global_step)
+        # logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
 
     tr_loss, logging_loss = 0.0, 0.0
     model.zero_grad()
@@ -219,9 +220,9 @@ def train(args, train_dataset, model, tokenizer):
         for step, batch in enumerate(epoch_iterator):
 
             # Skip past any already trained steps if resuming training
-            if steps_trained_in_current_epoch > 0:
-                steps_trained_in_current_epoch -= 1
-                continue
+            # if steps_trained_in_current_epoch > 0:
+            #     steps_trained_in_current_epoch -= 1
+            #     continue
 
             model.train()
             batch = tuple(t.to(args.device) for t in batch)
