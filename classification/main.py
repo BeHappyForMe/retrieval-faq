@@ -92,7 +92,7 @@ def evaluate(df,model,loss_fn,device,tokenizer,args):
 
         sim = sim.view(-1)
         target = target.view(-1)
-        num_corrects = torch.sum(sim==target).item()
+        num_corrects += torch.sum(sim==target).item()
         total_counts += target.shape[0]
 
     print("accuracy:{}".format(num_corrects/total_counts))
