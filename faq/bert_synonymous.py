@@ -187,7 +187,7 @@ def train(args, train_dataset, model, processor, tokenizer):
     set_seed(args)
     for k in train_iterator:
         if k!=0:
-            dataset,_,_=load_examples(args,args.task_name,tokenizer,processor)
+            train_dataset,_,_=load_examples(args,args.task_name,tokenizer,processor)
         args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
         train_sampler = SequentialSampler(train_dataset)
         train_dataloader = DataLoader(train_dataset,sampler=train_sampler,batch_size=args.train_batch_size)
@@ -202,6 +202,7 @@ def train(args, train_dataset, model, processor, tokenizer):
             batch = tuple(t.to(args.device) for t in batch)
             pos_inputs = {"input_ids": batch[0], "attention_mask": batch[1], "token_type_ids": batch[2]}
             neg_inputs = {"input_ids": batch[3], "attention_mask": batch[4], "token_type_ids": batch[5]}
+            # 分别训练同义句pair，及非同义句pari使用hingeloss计算损失
             pos_outputs = model(**pos_inputs)
             neg_outputs = model(**neg_inputs)
 
@@ -224,7 +225,8 @@ def train(args, train_dataset, model, processor, tokenizer):
 
 
 def evaluate(args, model, eval_dataset):
-    # 把所有的问题全部用BERT编码
+    # 把所有的问题与新问题pair全部用BERT编码
+    # 输出score
     scores = []
 
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
