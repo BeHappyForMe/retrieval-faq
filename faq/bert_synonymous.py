@@ -140,7 +140,7 @@ class BertForFAQHinge(BertPreTrainedModel):
         pooled_output = outputs[1]
 
         pooled_output = self.dropout(pooled_output)
-        score = self.scoring(pooled_output)
+        score = F.tanh(self.scoring(pooled_output))
 
         outputs = (score,) + outputs[2:]  # add hidden states and attention if they are here
 
@@ -485,18 +485,18 @@ def main():
     config = config_class.from_pretrained(
         args.config_name if args.config_name else args.model_name_or_path,
         finetuning_task=args.task_name,
-        cache_dir=args.cache_dir if args.cache_dir else "./synonymous_model/cache",
+        cache_dir=args.cache_dir if args.cache_dir else "./model_pkl/synonymous_model/cache",
     )
     tokenizer = tokenizer_class.from_pretrained(
         args.tokenizer_name if args.tokenizer_name else args.model_name_or_path,
         do_lower_case=args.do_lower_case,
-        cache_dir=args.cache_dir if args.cache_dir else "./synonymous_model/cache",
+        cache_dir=args.cache_dir if args.cache_dir else "./model_pkl/synonymous_model/cache",
     )
     model = model_class.from_pretrained(
         args.model_name_or_path,
         from_tf=bool(".ckpt" in args.model_name_or_path),
         config=config,
-        cache_dir=args.cache_dir if args.cache_dir else "./synonymous_model/cache",
+        cache_dir=args.cache_dir if args.cache_dir else "./model_pkl/synonymous_model/cache",
     )
 
     if args.local_rank == 0:

@@ -35,7 +35,7 @@ class Tokenizer():
         return [self.word2id.get(w,0) for w in text]
 
     def id2text(self,ids):
-        return "".join([self[id] for id in ids])
+        return "".join([self.id2word[id] for id in ids])
 
     @property
     def vocab_size(self):
@@ -48,7 +48,6 @@ def create_tokenizer(texts,vocab_size):
     :param vocab_size:
     :return:
     """
-    allvocab = []
     word_counter = Counter()
     seg = pkuseg.pkuseg()
     for text in texts:
