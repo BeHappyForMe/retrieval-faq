@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import pkuseg
 from collections import Counter
 import numpy as np
+import math
 
 
 class GRUEncoder(nn.Module):
@@ -45,9 +46,71 @@ class GRUEncoder(nn.Module):
         #batch,hidden
         return self.dropout(hidden)
 
+
 class TransformerEncoder(nn.Module):
-    #TODO
-    pass
+    # self-attention
+    def __init__(self,vocab_size,embed_size,head_attention_size,dropout_p=0.1,num_heads=4):
+        super(TransformerEncoder,self).__init__()
+        self.all_head_size = num_heads * head_attention_size
+        if embed_size % head_attention_size != 0:
+            raise ValueError(
+                "The embed_size size (%d) is not a multiple of the number of attention "
+                "heads (%d)" % (embed_size, num_heads))
+        self.embed = nn.Embedding(vocab_size,embed_size)
+
+        self.query = nn.Linear(embed_size, self.all_head_size)
+        self.key = nn.Linear(embed_size, self.all_head_size)
+        self.value = nn.Linear(embed_size, self.all_head_size)
+        self.dropout = nn.Dropout(dropout_p)
+
+        self.num_heads = num_heads
+        self.head_attention_size = head_attention_size
+
+    def transpose_for_scores(self,x):
+        # [ batch , seq , n_heads, head_attention_size]
+        x_nes_size = x.size()[:-1] + (self.num_heads,self.head_attention_size)
+        x = x.view(*x_nes_size)
+
+        return x.permute(0,2,1,3)
+
+    def forward(self,x,x_mask):
+        # [batch, seq,  embed ]
+        x_embed = self.dropout(self.embed(x))
+
+        # [ batch, seq, all_head_size ]
+        mixed_query_layer = self.query(x_embed)
+        mixed_key_layer = self.key(x_embed)
+        mixed_value_layer = self.value(x_embed)
+
+        # [ batch, n_heads, seq,  head_size]
+        query_layer = self.transpose_for_scores(mixed_query_layer)
+        key_layer = self.transpose_for_scores(mixed_key_layer)
+        value_layer = self.transpose_for_scores(mixed_value_layer)
+
+        # 计算attension score [batch, n_heads, seq, seq]
+        attention_scores = torch.matmul(query_layer,key_layer.transpose(-1,-2))
+        attention_scores = attention_scores / math.sqrt(self.head_attention_size)
+
+        # 将mask扩展成 [batch, n_heads, seq, seq] 需要mask的给负数，保证softmax后可以忽略
+        attention_mask = x_mask[:,None,None,:]
+        attention_mask = (1.0 - attention_mask) * -10000.0
+        attention_scores = attention_scores+attention_mask
+        # softmax成probs
+        attention_probs = nn.Softmax(dim=-1)(attention_scores)
+
+        # [ batch, n_heads, seq,  head_size]
+        outputs = torch.matmul(attention_probs,value_layer)
+
+        outputs = outputs.permute(0,2,1,3).contiguous()
+        new_shape_size = outputs.size()[:-2] + (self.all_head_size,)
+        # [ batch, seq, all_head_size]
+        outputs = outputs.view(*new_shape_size)
+
+        # 将seq维度取平均获取句子vectors
+        outputs = torch.sum(outputs*x_mask.unsqueeze(2),dim=1) / torch.sum(x_mask,1,keepdim=True)
+
+        return outputs
+
 
 class DualEncoder(nn.Module):
     """双编码器架构"""

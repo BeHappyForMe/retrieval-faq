@@ -13,11 +13,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm,trange
 
-from models_customize import GRUEncoder,DualEncoder,create_tokenizer,list2tensor,Tokenizer
+from models_customize import GRUEncoder,DualEncoder,create_tokenizer,list2tensor,Tokenizer,TransformerEncoder
 
-"""
-    自定义model，训练新问题与答案的相似度
-"""
 
 def train(args,model,tokenizer,optimizer,df,device):
     df = df[df['is_best']==1].sample(frac=1)
@@ -149,6 +146,10 @@ def main():
     parser.add_argument("--loss_function", default="cosine", type=str, required=False,
 						choices=["CrossEntropy", "cosine","Hinge"],
 						help="which loss function to choose")
+    parser.add_argument("--head_attention_size",default=512,type=int,required=False,
+                        help="size of every of embed")
+    parser.add_argument("--num_heads",default=8,type=int,required=False,
+                        help="number of head attention")
     args = parser.parse_args()
 
     #load data
@@ -174,8 +175,11 @@ def main():
         with open(os.path.join(args.output_dir,"customize_tokenizer.pickle"),"rb") as fout:
             tokenizer = pickle.load(fout)
 
-    title_encoder = GRUEncoder(tokenizer.vocab_size, args.embed_size, args.hidden_size)
-    reply_encoder = GRUEncoder(tokenizer.vocab_size, args.embed_size, args.hidden_size)
+    # title_encoder = GRUEncoder(tokenizer.vocab_size, args.embed_size, args.hidden_size)
+    # reply_encoder = GRUEncoder(tokenizer.vocab_size, args.embed_size, args.hidden_size)
+
+    title_encoder = TransformerEncoder(tokenizer.vocab_size, args.embed_size, args.head_attention_size,num_heads=args.num_heads)
+    reply_encoder = TransformerEncoder(tokenizer.vocab_size, args.embed_size, args.head_attention_size,num_heads=args.num_heads)
     model = DualEncoder(title_encoder,reply_encoder,args.loss_function)
     optimizer = torch.optim.Adam(model.parameters(),lr=1e-4)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
