@@ -10,7 +10,7 @@ def split():
         分割训练、测试集
     :return:
     """
-    df = pd.read_csv("./data/baoxianzhidao_filter.csv")
+    df = pd.read_csv("./data/touzizhidao_filter.csv")
 
     # 数据集中question为null情况
     best_title = df.apply(lambda row:row['question'] if row['question'] is not None and len(str(row['question'])) > len(str(row['title'])) else
@@ -19,9 +19,8 @@ def split():
 
     sample = np.random.choice(df.index,size=int(len(df)*0.9),replace=False)
 
-    df.iloc[sample].to_csv("./data/train.csv",index=False)
-    df.drop(sample).to_csv("./data/dev.csv",index=False)
-
+    df.iloc[sample].to_csv("./data/train_touzi.csv",index=False)
+    df.drop(sample).to_csv("./data/dev_touzi.csv",index=False)
 
 class Tokenizer():
     """

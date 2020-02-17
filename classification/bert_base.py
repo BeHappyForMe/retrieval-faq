@@ -103,16 +103,17 @@ def set_seed(args):
 
 class FAQProcessor(DataProcessor):
     def get_train_examples(self,data_dir):
-        return self._create_examples(os.path.join(data_dir,"train.csv"),"train")
+        return self._create_examples(os.path.join(data_dir,"touzi_train_one_neg.csv"),"train")
 
     def get_dev_examples(self,data_dir):
-        return self._create_examples(os.path.join(data_dir,"dev.csv"),"dev")
+        return self._create_examples(os.path.join(data_dir,"touzi_test_one_neg.csv"),"dev")
 
     def get_labels(self):
         return [0,1]
 
     def _create_examples(self,path,set_type):
-        df = pd.read_csv(path)
+        df = pd.read_csv(path,sep='\t')
+        df = df.sample(frac=1)
         examples = []
         titles = df["best_title"].astype("str").tolist()
         reply = df["reply"].astype("str").tolist()
@@ -122,13 +123,13 @@ class FAQProcessor(DataProcessor):
             examples.append(InputExample(guid=guid,text_a=titles[i],text_b=reply[i],label=labels[i]))
         return examples
 
-processors["faq_bot_bert"] = FAQProcessor
-output_modes["faq_bot_bert"] = "classification"
+processors["faq_cla_bert"] = FAQProcessor
+output_modes["faq_cla_bert"] = "classification"
 
 def train(args, train_dataset, model, tokenizer):
     """ Train the model """
     if args.local_rank in [-1, 0]:
-        tb_writer = SummaryWriter()
+        tb_writer = SummaryWriter('./runs/touzi/one-one')
 
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
     train_sampler = RandomSampler(train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
@@ -259,8 +260,9 @@ def train(args, train_dataset, model, tokenizer):
 
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     logs = {}
+                    # 每2W步一次evaluate
                     if (
-                        args.local_rank == -1 and args.evaluate_during_training
+                        args.local_rank == -1 and args.evaluate_during_training and global_step % 5000 == 0
                     ):  # Only evaluate when single GPU otherwise metrics may not average well
                         results = evaluate(args, model, tokenizer)
                         for key, value in results.items():
@@ -365,12 +367,12 @@ def evaluate(args, model, tokenizer, prefix=""):
         elif args.output_mode == "regression":
             preds = np.squeeze(preds)
 
-        if eval_task=="faq_bot_bert":
+        if eval_task=="faq_cla_bert":
             result = {"acc": simple_accuracy(preds, out_label_ids)}
         else:
             result = compute_metrics(eval_task, preds, out_label_ids)
         results.update(result)
-
+        print(result)
         output_eval_file = os.path.join(eval_output_dir, prefix, "eval_results.txt")
         with open(output_eval_file, "w") as writer:
             logger.info("***** Eval results {} *****".format(prefix))
@@ -392,9 +394,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False):
         args.data_dir,
         "cached_{}_{}_{}_{}".format(
             "dev" if evaluate else "train",
-            list(filter(None, args.model_name_or_path.split("/"))).pop(),
+            "one-neg",
             str(args.max_seq_length),
-            str(task),
+            str(task)
         ),
     )
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
@@ -432,6 +434,7 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False):
     all_token_type_ids = torch.tensor([f.token_type_ids for f in features], dtype=torch.long)
     if output_mode == "classification":
         all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
+        print(all_labels.shape)
     elif output_mode == "regression":
         all_labels = torch.tensor([f.label for f in features], dtype=torch.float)
 
@@ -440,40 +443,50 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False):
 
 
 def main():
+    torch.cuda.empty_cache()
     parser = argparse.ArgumentParser()
 
     # Required parameters
     parser.add_argument(
         "--data_dir",
-        default=None,
+        default="",
         type=str,
         required=True,
         help="The input data dir. Should contain the .tsv files (or other data files) for the task.",
     )
     parser.add_argument(
         "--model_type",
-        default=None,
+        default="bert",
         type=str,
         required=True,
         help="Model type selected in the list: " + ", ".join(MODEL_CLASSES.keys()),
     )
+    # parser.add_argument(
+    #     "--model_name_or_path",
+    #     default="./models/baoxianshiyan",
+    #     type=str,
+    #     required=False,
+    #     help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(ALL_MODELS),
+    # )
+
     parser.add_argument(
         "--model_name_or_path",
-        default=None,
+        default="",
         type=str,
         required=True,
         help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(ALL_MODELS),
     )
+
     parser.add_argument(
         "--task_name",
-        default=None,
+        default="",
         type=str,
         required=True,
         help="The name of the task to train selected in the list: " + ", ".join(processors.keys()),
     )
     parser.add_argument(
         "--output_dir",
-        default=None,
+        default="",
         type=str,
         required=True,
         help="The output directory where the model predictions and checkpoints will be written.",
@@ -491,7 +504,7 @@ def main():
     )
     parser.add_argument(
         "--cache_dir",
-        default="",
+        default="./models/touzi/cache",
         type=str,
         help="Where do you want to store the pre-trained models downloaded from s3",
     )
@@ -505,7 +518,7 @@ def main():
     parser.add_argument("--do_train", action="store_true", help="Whether to run training.")
     parser.add_argument("--do_eval", action="store_true", help="Whether to run eval on the dev set.")
     parser.add_argument(
-        "--evaluate_during_training", action="store_true", help="Rul evaluation during training at each logging step."
+        "--evaluate_during_training",action="store_true", help="Rul evaluation during training at each logging step."
     )
     parser.add_argument(
         "--do_lower_case", action="store_true", help="Set this flag if you are using an uncased model."
@@ -521,23 +534,23 @@ def main():
         default=1,
         help="Number of updates steps to accumulate before performing a backward/update pass.",
     )
-    parser.add_argument("--learning_rate", default=5e-5, type=float, help="The initial learning rate for Adam.")
+    parser.add_argument("--learning_rate", default=2e-5, type=float, help="The initial learning rate for Adam.")
     parser.add_argument("--weight_decay", default=0.0, type=float, help="Weight decay if we apply some.")
     parser.add_argument("--adam_epsilon", default=1e-8, type=float, help="Epsilon for Adam optimizer.")
     parser.add_argument("--max_grad_norm", default=1.0, type=float, help="Max gradient norm.")
     parser.add_argument(
-        "--num_train_epochs", default=3.0, type=float, help="Total number of training epochs to perform."
+        "--num_train_epochs", default=10.0, type=float, help="Total number of training epochs to perform."
     )
     parser.add_argument(
         "--max_steps",
-        default=-1,
+        default=0,
         type=int,
         help="If > 0: set total number of training steps to perform. Override num_train_epochs.",
     )
     parser.add_argument("--warmup_steps", default=0, type=int, help="Linear warmup over warmup_steps.")
 
-    parser.add_argument("--logging_steps", type=int, default=200, help="Log every X updates steps.")
-    parser.add_argument("--save_steps", type=int, default=3000, help="Save checkpoint every X updates steps.")
+    parser.add_argument("--logging_steps", type=int, default=500, help="Log every X updates steps.")
+    parser.add_argument("--save_steps", type=int, default=5000, help="Save checkpoint every X updates steps.")
     parser.add_argument(
         "--eval_all_checkpoints",
         action="store_true",
@@ -701,7 +714,7 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         for checkpoint in checkpoints:
             global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
-            prefix = checkpoint.split("/")[-1] if checkpoint.find("checkpoint") != -1 else ""
+            prefix = "checkpoint-" + str(checkpoint.split("-")[-1]) if checkpoint.find("checkpoint") != -1 else ""
 
             model = model_class.from_pretrained(checkpoint)
             model.to(args.device)
