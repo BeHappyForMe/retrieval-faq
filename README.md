@@ -47,7 +47,7 @@ pip install allennlp
 ELMo模型最终MRR指标为：0.18630804064680587
 
 
-####BERT
+#### BERT
 
 直接使用BERT来对问题进行编码，采用CLS token或者在sequence上求平均来作为句子的表示，使用的为huggingface 的transformers，
 模型训练及评估代码在bert_baseline包下bert_base.py中。MRR指标为0.1910977126696094。
