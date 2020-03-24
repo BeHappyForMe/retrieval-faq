@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<style>
+#header {
+    background-color:black;
+    color:white;
+    text-align:center;
+    padding:5px;
+}
+#nav {
+    line-height:30px;
+    background-color:#eeeeee;
+    height:300px;
+    width:100px;
+    float:left;
+    padding:5px;
+}
+#section {
+    width:350px;
+    float:left;
+    padding:10px;
+}
+#footer {
+    background-color:black;
+    color:white;
+    clear:both;
+    text-align:center;
+   padding:5px;
+}
+</style>
+    <title></title>
+</head>
+
+<body>
+    <div id="header">
+        <h1>投资问答推荐系统</h1>
+    </div>
+    <br />
+    <form  style="width:100%;text-align:center">
+        <h4>请输入你的问题：</h4>
+        {% if title %}
+        <textarea name="title" style="height:50px;width:820px;">{{title}}</textarea>
+        {% else %}
+        <textarea name="title" style="height:50px;width:820px;"></textarea>
+        {% endif %}
+        <br />
+        <input type="submit" value="Submit" style="color: cadetblue;margin-top: 20px"/>
+    </form>
+    {% if message %}
+    <br />
+    <h4>FQA 推荐结果:</h4>
+    <p style="color: cornflowerblue;">{{ message }}</p>
+    {% endif %}
+    <br />
+    <div id="footer">
+        Copyright 投资知道
+    </div>
+</body>
+</html>
