@@ -2,22 +2,9 @@ import pandas as pd
 import json
 import requests
 import time
-from threading import Lock
-import threading
 
-
-'''
-    借助有道词典通过回译方式构建同义句对
-'''
-
-pd_all = pd.read_csv('./data/baoxianzhidao_filter.csv')
-pd_all = pd_all[pd_all['is_best']==1]
-
-best_title = pd_all.apply(
-    lambda row : row["question"] if row['question'] is not None and len(str(row['question']))
-                                    > len(str(row['question'])) else row['title'],axis=1)
-
-best_title = best_title.tolist()
+pd_all = pd.read_csv('../data/baoxian_right.csv', sep='\t')
+best_title = pd_all['best_title'].tolist()
 
 
 def translate(word, ip):
@@ -48,7 +35,7 @@ def translate(word, ip):
         # 相应失败就返回空
         return None
 
-# 获取代理ip
+
 def get_ip(url):
     ip_text = requests.get(url)
     ip_text = ip_text.text
@@ -60,11 +47,15 @@ def get_ip(url):
     return ip_text.strip()
 
 
-num_thread_all = 8
+num_thread_all = 15
 num_thread_ing = 0
 ip = None
-flag = True # 表示线程可前进
+flag = True  # 表示线程可前进
 synonymous = []
+synonymous.append("best_title" + '\t' + "translated" + '\n')
+from threading import Lock
+import threading
+
 lock = Lock()
 
 
@@ -127,9 +118,11 @@ for idx, line in enumerate(best_title):
         else:
             time.sleep(1)
 
-with open('./data/synonymous.tsv', 'w', encoding='utf-8') as file:
+with open('../data/baoxian_synonymous.csv', 'w', encoding='utf-8') as file:
     file.writelines(synonymous)
 
-
-
-
+translated = pd.read_csv('../data/baoxian_synonymous.csv', sep='\t', header=0)
+merged = pd_all.merge(translated, left_on='best_title', right_on='best_title')
+merged[['best_title', 'translated', 'reply', 'is_best']].drop_duplicates(inplace=True)
+merged[['best_title', 'translated', 'reply', 'is_best']].to_csv('../data/baoxian_preprocessed_synonymous.csv',
+                                                                index=False, sep='\t')

@@ -358,6 +358,7 @@ def main():
     )
     model = model.to(device)
 
+    # 将原数据库里有的问题句子通过BERT获得句子表示
     if not os.path.exists("embeddings.pkl"):
         eval_dataset, candidate_title, candidate_reply = load_examples(args, tokenizer)
         outputs = evaluate(args, model, eval_dataset)
@@ -374,7 +375,7 @@ def main():
         questions = evulate_df['问题'].tolist()
         matched_questions = evulate_df['匹配问题'].tolist()
         matched_questions_indexs = []
-        # 找出匹配问题对应的index
+        # 找出匹配问题在原数据库里对应的index
         for k, q in enumerate(matched_questions):
             flag = False
             for i, _q in enumerate(candidate_title):
