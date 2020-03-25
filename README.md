@@ -64,4 +64,5 @@ ELMo模型最终MRR指标为：0.18630804064680587
 * round trip translation的翻译效果不佳，很多句子与原句的语义有较大差距。
 * 数据量太小
 
-<a href="https://github.com/BeHappyForMe/retrieval-faq/blob/master/image/faq_0.png">结果展示</a>
+![avatar](image/faq_0.png)
+![avatar](image/faq_1.png)
